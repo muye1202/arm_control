@@ -69,7 +69,7 @@ def get_image():
     depth_scale = depth_sensor.get_depth_scale()
     # We will be removing the background of objects more than
     #  clipping_distance_in_meters meters away
-    clipping_distance_in_meters = 0.3 #1 meter
+    clipping_distance_in_meters = 0.5 #1 meter
     clipping_distance = clipping_distance_in_meters / depth_scale
 
     # Create an align object
@@ -97,13 +97,30 @@ def get_image():
     depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) #depth image is 1 channel, color is 3 channels
     bg_removed = np.where((depth_image_3d > clipping_distance) | (depth_image_3d <= 0), grey_color, color_image)
 
+    # remove noise in image:
+    noise_removed = cv2.fastNlMeansDenoisingColored(bg_removed)
+
     #cv2.imshow('img', color_image)
     #k = cv2.waitKey(1) & 0xFF
     
-    return color_image, depth_image, depth_scale, intrinsic_param
+    return noise_removed, depth_image, depth_scale, intrinsic_param
 
 
 def thresholding(frame):
+    # Convert BGR to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    
+    # define range of purple color in HSV
+    a = 67
+    b = 30
+    c = 53
+    d = 60
+    lower = np.array([a-d , b-d , c-d])
+    upper = np.array([a+d, b+d, c+d])
+    # Threshold the HSV image to get only blue colors
+    mask = cv2.inRange(hsv, lower, upper)
+    res = cv2.bitwise_and(frame, frame, mask = mask)
+
     """
     cv2.namedWindow('controls')
     #create trackbar in 'controls' window with name 'r''
@@ -111,23 +128,22 @@ def thresholding(frame):
     cv2.createTrackbar('second channel','controls',0,360,change_color_two)
     cv2.createTrackbar('third channel','controls',0,360,change_color_three)
     cv2.createTrackbar('fourth channel','controls',0,360,change_color_four)
+
+    while(1):
+
+        # Convert BGR to HSV
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        d = 80
+        lower = np.array([a-d , b-d , c-d])
+        upper = np.array([a+d, b+d, c+d])
+        # Threshold the HSV image to get only blue colors
+        mask = cv2.inRange(hsv, lower, upper)
+        res = cv2.bitwise_and(frame, frame, mask = mask)
+
+        cv2.imshow("res", res)
+        k = cv2.waitKey(1) & 0xFF
     """
 
-    # Convert BGR to HSV
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    # a = int(cv2.getTrackbarPos('first channel', 'controls'))
-    # b = int(cv2.getTrackbarPos('second channel', 'controls'))
-    # c = int(cv2.getTrackbarPos('third channel', 'controls'))
-    # define range of purple color in HSV
-    a = 152
-    b = 63
-    c = 118
-    d = 60
-    lower = np.array([a-d , b-d , c-d])
-    upper = np.array([a+d, b+d, c+d])
-    # Threshold the HSV image to get only blue colors
-    mask = cv2.inRange(hsv, lower, upper)
-    res = cv2.bitwise_and(frame, frame, mask = mask)
     cv2.imwrite('pen_color_image.png', res)
 
         
