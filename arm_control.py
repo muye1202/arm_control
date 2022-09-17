@@ -19,13 +19,6 @@ def grasp_pen():
     centroid_depth = depth_image[cy, cx] * depth_scale
     # pen 3d coordinate
     pen_coord = pen_coordinate(centroid_depth, intrinsic_param, cx, cy)
-
-    # robot.arm.go_to_home_pose()
-    # ee pos:
-    R, ee_pos = ee_pose()
-    # convert to cam frame
-    base_frame = pen_coord + np.array([0.45, 0.3, 0])
-    gripper_pos = base_frame + ee_pos
     
     trials = 0
     alpha = 0
@@ -37,13 +30,12 @@ def grasp_pen():
         # ee pos:
         R, ee_pos = ee_pose()
         # convert to cam frame
-        base_frame = pen_coord + np.array([0.3, 0.1, 0])
+        base_frame = pen_coord + np.array([0.15, 0.1, 0])
         gripper_pos = base_frame + ee_pos
         # move in xy plane:
-        del_x = abs(pen_coord[0] - gripper_pos[0])
-        del_y = abs(pen_coord[1] - gripper_pos[1])
-        z = np.sqrt(np.power(del_x, 2) + np.power(del_y, 2))
-        alpha = 1.2*np.arcsin(del_y / z)
+        del_x = pen_coord[0] - gripper_pos[0]
+        del_y = pen_coord[1] - gripper_pos[1]
+        alpha = np.arctan(del_y / del_x)
         
         robot.arm.set_joint_positions([alpha, beta, 0, 0], moving_time=2, accel_time=2)
 
@@ -51,23 +43,24 @@ def grasp_pen():
         # ee pos:
         R, ee_pos = ee_pose()
         # convert to cam frame
-        base_frame = pen_coord + np.array([0.45, 0.3, 0])
+        base_frame = pen_coord + np.array([0.15, 0.1, 0])
         gripper_pos = base_frame + ee_pos
 
-        del_h = abs(pen_coord[2] - gripper_pos[2])
-        del_x = abs(pen_coord[0] - gripper_pos[0])
-        beta = 0.7*np.arctan(del_h/del_x)
+        del_h = pen_coord[2] - gripper_pos[2]
+        del_x = pen_coord[0] - gripper_pos[0]
+        beta = np.arctan(del_h/del_x)
 
         robot.arm.set_joint_positions([alpha, beta, 0, 0], moving_time=2, accel_time=2)
             
         trials += 1
 
+    robot.gripper.set_pressure(2.0)
     robot.gripper.grasp()
     time.sleep(2)
 
     # turn 180 degrees
     turn = 180* np.pi / 180
-    robot.arm.set_joint_positions([-turn, beta, 0, 0], moving_time=4, accel_time=4)
+    #robot.arm.set_joint_positions([-turn, beta, 0, 0], moving_time=4, accel_time=4)
     time.sleep(2)
 
     robot.arm.go_to_sleep_pose()

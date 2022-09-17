@@ -3,6 +3,28 @@ import numpy as np
 import cv2
 from collections import OrderedDict
 
+a = 0
+b = 0
+c = 0
+d = 0
+e = 0
+f = 0
+def change_color_one(x):
+    global a
+    a = x
+
+def change_color_two(x):
+    global b
+    b = x
+
+def change_color_three(x):
+    global c
+    c = x
+
+def change_color_four(x):
+    global d
+    d = x
+
 def get_image():
     # Create a pipeline
     pipeline = rs.pipeline()
@@ -37,16 +59,14 @@ def get_image():
     else:
         config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 
+
     # Start streaming
     profile = pipeline.start(config)
-    pro = profile.get_stream(rs.stream.color)
+    pro = profile.get_stream(rs.stream.color)       
     intrinsic_param = pro.as_video_stream_profile().get_intrinsics()
 
-    # Getting the depth sensor's depth scale (see rs-align example for explanation)
     depth_sensor = profile.get_device().first_depth_sensor()
     depth_scale = depth_sensor.get_depth_scale()
-    print("Depth Scale is: " , depth_scale)
-
     # We will be removing the background of objects more than
     #  clipping_distance_in_meters meters away
     clipping_distance_in_meters = 0.3 #1 meter
@@ -76,45 +96,41 @@ def get_image():
     grey_color = 153
     depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) #depth image is 1 channel, color is 3 channels
     bg_removed = np.where((depth_image_3d > clipping_distance) | (depth_image_3d <= 0), grey_color, color_image)
+
+    #cv2.imshow('img', color_image)
+    #k = cv2.waitKey(1) & 0xFF
     
-    return bg_removed, depth_image, depth_scale, intrinsic_param
+    return color_image, depth_image, depth_scale, intrinsic_param
+
 
 def thresholding(frame):
     """
-    def change_color_one(x):
-        pass
-
-    def change_color_two(x):
-        pass
-
-    def change_color_three(x):
-        pass
-    """
-
-    #cv2.namedWindow('controls')
+    cv2.namedWindow('controls')
     #create trackbar in 'controls' window with name 'r''
-    #cv2.createTrackbar('first channel','controls',0,360,change_color_one)
-    #cv2.createTrackbar('second channel','controls',0,360,change_color_two)
-    #cv2.createTrackbar('third channel','controls',0,360,change_color_three)
+    cv2.createTrackbar('first channel','controls',0,360,change_color_one)
+    cv2.createTrackbar('second channel','controls',0,360,change_color_two)
+    cv2.createTrackbar('third channel','controls',0,360,change_color_three)
+    cv2.createTrackbar('fourth channel','controls',0,360,change_color_four)
+    """
 
     # Convert BGR to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    #a = int(cv2.getTrackbarPos('first channel', 'controls'))
-    #b = int(cv2.getTrackbarPos('second channel', 'controls'))
-    #c = int(cv2.getTrackbarPos('third channel', 'controls'))
+    # a = int(cv2.getTrackbarPos('first channel', 'controls'))
+    # b = int(cv2.getTrackbarPos('second channel', 'controls'))
+    # c = int(cv2.getTrackbarPos('third channel', 'controls'))
     # define range of purple color in HSV
-    a = 134
-    b = 91
-    c = 69
-    range = 90
-    lower = np.array([a - range, b - range, c - range])
-    upper = np.array([a + range, b + range, c+range])
+    a = 152
+    b = 63
+    c = 118
+    d = 60
+    lower = np.array([a-d , b-d , c-d])
+    upper = np.array([a+d, b+d, c+d])
     # Threshold the HSV image to get only blue colors
     mask = cv2.inRange(hsv, lower, upper)
     res = cv2.bitwise_and(frame, frame, mask = mask)
     cv2.imwrite('pen_color_image.png', res)
 
-    cv2.destroyAllWindows()
+        
 
 def contour():
     img = cv2.imread('pen_color_image.png')
@@ -176,11 +192,11 @@ def pen_coordinate(depth_image, intr, cx, cy):
 if __name__ == "__main__":
     color_image, depth_image, depth_scale, intrinsic_param = get_image()
     thresholding(color_image)
-    boundary, img = contour()
-    cx, cy = centroid(img, boundary)
-    centroid_depth = depth_image[cx, cy] * depth_scale
-    pen_coord = pen_coordinate(centroid_depth, intrinsic_param, cx, cy)
-    print(pen_coord)
+    #boundary, img = contour()
+    #cx, cy = centroid(img, boundary)
+    #centroid_depth = depth_image[cx, cy] * depth_scale
+    #pen_coord = pen_coordinate(centroid_depth, intrinsic_param, cx, cy)
+    #print(pen_coord)
     # cv2.imshow('pen', boundary)
 
     

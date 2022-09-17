@@ -8,4 +8,5 @@ import modern_robotics as mr
 robot = InterbotixManipulatorXS("px100", "arm", "gripper")
 if __name__ == "__main__":
     robot.arm.go_to_home_pose()
-    robot.arm.set_joint_positions([3.14,0,0,0], moving_time=2, accel_time=2)
+    robot.arm.set_joint_positions([0,0.5,0,0], moving_time=2, accel_time=2)
+    robot.arm.go_to_sleep_pose()
