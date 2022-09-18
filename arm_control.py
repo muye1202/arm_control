@@ -20,59 +20,50 @@ def grasp_pen():
     # pen 3d coordinate
     pen_coord = pen_coordinate(centroid_depth, intrinsic_param, cx, cy)
     # pen coord: (z, y, x)
-    base = np.array([0.12, 0.2, 0.3]) - pen_coord
-    base_frame = np.array([0, 0, 0])
-    base_frame[0] = base[2]
-    base_frame[1] = base[1]
-    base_frame[2] = base[0]
-    
-    alpha = 0
+    base = np.array([0.05, 0.12, 0.35]) - pen_coord
+    base_frame = np.array([base[2], base[1], base[0]])
 
-    # move the arm up for better rotation
-    robot.arm.set_ee_cartesian_trajectory(0, 0, 0.05)
-    # move in z plane:
+    # move in xy plane:
     # ee pos:
     R, ee_pos = ee_pose()
     # convert to cam frame
-    gripper_pos = base_frame + ee_pos
-
-    del_y = pen_coord[1] - gripper_pos[1]
-    del_x = abs(gripper_pos[0] - pen_coord[2])
-    alpha = -np.arctan(del_y / del_x)
+    # gripper_pos = base_frame - ee_pos
+    del_y = base_frame[1]
+    del_x = base_frame[0]
+    # del_y = pen_coord[1] - gripper_pos[1]
+    # del_x = abs(gripper_pos[0] - pen_coord[2])
+    alpha = np.arctan(del_y / del_x)
 
     # get current joint pos
     joints_pos = robot.arm.get_joint_commands()
     robot.arm.set_joint_positions([alpha, joints_pos[1], joints_pos[2], joints_pos[3]], moving_time=2, accel_time=2)
-    
-    # del_x = gripper_pos[0] - pen_coord[0]
-    # del_y = gripper_pos[1] - pen_coord[1]    
-    # xy_dist = np.linalg.norm(np.power(del_x, 2) + np.power(del_y, 2))
 
     # ee pos: (x, y, z)
     R, ee_pos = ee_pose()
     # convert to cam frame
-    gripper_pos = base_frame + ee_pos
-    # move in xy plane:
-    del_x = abs(pen_coord[2] - gripper_pos[0])
-    del_y = pen_coord[1] - gripper_pos[1]
-    del_z = gripper_pos[2] - pen_coord[0]
+    gripper_pos = base_frame # - ee_pos
+    # move in z plane:
+    # del_x = abs(pen_coord[2] - gripper_pos[0])
+    # del_y = abs(pen_coord[1] - gripper_pos[1])
+    # del_z = gripper_pos[2] - pen_coord[0]
     
+    robot.arm.set_ee_cartesian_trajectory(gripper_pos[0], 0, gripper_pos[2], moving_time=2)
+    """
     step_num = 2
-    step_x = 1.2*del_x/step_num
-    step_z = 0.8*del_z/step_num
-    for i in range(step_num):
+    step_x = del_x/step_num
+    step_z = del_z/step_num
+    for _ in range(step_num):
         robot.arm.set_ee_cartesian_trajectory(step_x, 0, step_z, moving_time=1)
+    """
 
-    # robot.arm.set_joint_positions([alpha, beta, 0, 0], moving_time=2, accel_time=2)
 
     robot.gripper.set_pressure(2.0)
     robot.gripper.grasp()
-    time.sleep(2)
+    time.sleep(1)
 
     # turn 180 degrees
     turn = 180* np.pi / 180
     #robot.arm.set_joint_positions([-turn, beta, 0, 0], moving_time=4, accel_time=4)
-    time.sleep(2)
 
     robot.arm.go_to_sleep_pose()
     robot.gripper.release()

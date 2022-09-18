@@ -180,37 +180,23 @@ def contour():
     #cv2.waitKey(0)
 
     contours, hierarchy = cv2.findContours(im, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    # contour_dict = {}
-    # area = []
-    # for cnt in contours:
-    #     s = cv2.contourArea(cnt)
-    #     area.append(s)
-    #     contour_dict[s] = cnt
-
-    
-    # pen_cont = []
-    # area.sort(reverse=True)
-    # pen_cont.append(contour_dict[area[0]])
-    
-    
-    cv2.drawContours(img, contours, -1, (0,255,0), 3)
+    # concatenate the contours:
+    total_cont = contours[0]
+    for cnt in contours[1:]:
+        total_cont = np.concatenate((total_cont, cnt), axis=0)
+        
+    cv2.drawContours(img, total_cont, -1, (0,255,0), 3)
     cv2.imwrite('contour.png', img)
     #cv2.imshow('contours', img)
     #cv2.waitKey(0)
 
-    return contours, img
+    return total_cont, img
 
 def centroid(img, contour):
-    cx = 0
-    cy = 0
-    for cnt in contour:
-        M = cv2.moments(cnt)
-        if M['m00'] != 0:
-            cx += int(M['m10']/M['m00'])
-            cy += int(M['m01']/M['m00'])
-
-    cx = int(cx / len(contour))
-    cy = int(cy / len(contour))
+    
+    mmt = cv2.moments(contour)
+    cx = int(mmt['m10']/mmt['m00'])
+    cy = int(mmt['m01']/mmt['m00'])
 
     cv2.circle(img, (cx, cy), 5, (0,0,255), -1)
     cv2.imwrite('centroid.png', img)
@@ -218,15 +204,9 @@ def centroid(img, contour):
     #cv2.waitKey(0)
 
     return cx, cy
-    
-    """
-    cv2.circle(img, (cx, cy), 5, (0,0,255), -1)
-    cv2.imshow('centroid', img)
-    cv2.waitKey(0)
-    """
 
 def pen_coordinate(depth_image, intr, cx, cy):
-    coord = rs.rs2_deproject_pixel_to_point(intr, [cx, cy], depth_image)
+    coord = rs.rs2_deproject_pixel_to_point(intr, [cy, cx], depth_image)
     return coord
 
 if __name__ == "__main__":
