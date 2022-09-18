@@ -2,13 +2,15 @@ import pyrealsense2 as rs
 import numpy as np
 import cv2
 from collections import OrderedDict
+from matplotlib import pyplot as plt
 
 a = 0
 b = 0
 c = 0
 d = 0
-e = 0
-f = 0
+edge_low = 0
+edge_upper = 0
+
 def change_color_one(x):
     global a
     a = x
@@ -105,23 +107,7 @@ def get_image():
     
     return noise_removed, depth_image, depth_scale, intrinsic_param
 
-
-def thresholding(frame):
-    # Convert BGR to HSV
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    
-    # define range of purple color in HSV
-    a = 67
-    b = 30
-    c = 53
-    d = 60
-    lower = np.array([a-d , b-d , c-d])
-    upper = np.array([a+d, b+d, c+d])
-    # Threshold the HSV image to get only blue colors
-    mask = cv2.inRange(hsv, lower, upper)
-    res = cv2.bitwise_and(frame, frame, mask = mask)
-
-    """
+def color_calibration(frame):
     cv2.namedWindow('controls')
     #create trackbar in 'controls' window with name 'r''
     cv2.createTrackbar('first channel','controls',0,360,change_color_one)
@@ -133,7 +119,6 @@ def thresholding(frame):
 
         # Convert BGR to HSV
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        d = 80
         lower = np.array([a-d , b-d , c-d])
         upper = np.array([a+d, b+d, c+d])
         # Threshold the HSV image to get only blue colors
@@ -142,40 +127,78 @@ def thresholding(frame):
 
         cv2.imshow("res", res)
         k = cv2.waitKey(1) & 0xFF
-    """
+
+def thresholding(frame):
+    # Convert BGR to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    
+    # define range of purple color in HSV
+    a = 114
+    b = 32
+    c = 30
+    d = 48
+    lower = np.array([a-d , b-d , c-d])
+    upper = np.array([a+d, b+d, c+d])
+    # Threshold the HSV image to get only blue colors
+    mask = cv2.inRange(hsv, lower, upper)
+    res = cv2.bitwise_and(frame, frame, mask = mask)
 
     cv2.imwrite('pen_color_image.png', res)
 
-        
+def edge_lower(x):
+    global edge_low
+    edge_low = x
+
+def edge_up(x):
+    global edge_upper
+    edge_upper = x
+
+def edge_cal():
+    img = cv2.imread('pen_color_image.png')
+    imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    cv2.namedWindow('controls')
+    #create trackbar in 'controls' window with name 'r''
+    cv2.createTrackbar('first channel','controls',0,360,edge_lower)
+    cv2.createTrackbar('second channel','controls',0,360,edge_up)
+
+    while(1):
+        edges = cv2.Canny(imgray, edge_low, edge_upper)
+        cv2.imshow('edges', edges)
+
+        k = cv2.waitKey(1) & 0xFF
 
 def contour():
+
     img = cv2.imread('pen_color_image.png')
     imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # imgray = cv2.GaussianBlur(imgray, (7, 7), cv2.BORDER_DEFAULT)
-    ret, im = cv2.threshold(imgray, 60, 255, cv2.THRESH_BINARY)
+    edges = cv2.Canny(imgray, 51, 109)
+    ret, im = cv2.threshold(edges, 60, 255, cv2.THRESH_BINARY)
 
     #cv2.imshow('img after threshold', im)
     #cv2.waitKey(0)
 
     contours, hierarchy = cv2.findContours(im, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contour_dict = {}
-    area = []
-    for cnt in contours:
-        s = cv2.contourArea(cnt)
-        area.append(s)
-        contour_dict[s] = cnt
+    # contour_dict = {}
+    # area = []
+    # for cnt in contours:
+    #     s = cv2.contourArea(cnt)
+    #     area.append(s)
+    #     contour_dict[s] = cnt
 
     
-    pen_cont = []
-    area.sort(reverse=True)
-    pen_cont.append(contour_dict[area[0]])
+    # pen_cont = []
+    # area.sort(reverse=True)
+    # pen_cont.append(contour_dict[area[0]])
     
     
-    #cv2.drawContours(img, contours, -1, (0,255,0), 3)
+    cv2.drawContours(img, contours, -1, (0,255,0), 3)
+    cv2.imwrite('contour.png', img)
     #cv2.imshow('contours', img)
     #cv2.waitKey(0)
 
-    return pen_cont, img
+    return contours, img
 
 def centroid(img, contour):
     cx = 0
@@ -189,7 +212,8 @@ def centroid(img, contour):
     cx = int(cx / len(contour))
     cy = int(cy / len(contour))
 
-    #cv2.circle(img, (cx, cy), 5, (0,0,255), -1)
+    cv2.circle(img, (cx, cy), 5, (0,0,255), -1)
+    cv2.imwrite('centroid.png', img)
     #cv2.imshow('centroid', img)
     #cv2.waitKey(0)
 
@@ -207,7 +231,9 @@ def pen_coordinate(depth_image, intr, cx, cy):
 
 if __name__ == "__main__":
     color_image, depth_image, depth_scale, intrinsic_param = get_image()
-    thresholding(color_image)
+    color_calibration(color_image)
+    #thresholding(color_image)
+    #edge_cal()
     #boundary, img = contour()
     #cx, cy = centroid(img, boundary)
     #centroid_depth = depth_image[cx, cy] * depth_scale

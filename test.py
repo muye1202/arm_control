@@ -9,7 +9,7 @@ import modern_robotics as mr
 robot = InterbotixManipulatorXS("px100", "arm", "gripper")
 if __name__ == "__main__":
     
-    robot.arm.set_ee_cartesian_trajectory(x = 0.1, y =0, z =0.1, moving_time=2)
+    robot.arm.set_ee_cartesian_trajectory(x = 0, y =0, z =0.1, moving_time=2)
     joints = robot.arm.get_joint_commands()
     T = mr.FKinSpace(robot.arm.robot_des.M, robot.arm.robot_des.Slist, joints)
     [R, p] = mr.TransToRp(T)

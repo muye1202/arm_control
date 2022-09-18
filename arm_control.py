@@ -28,6 +28,8 @@ def grasp_pen():
     
     alpha = 0
 
+    # move the arm up for better rotation
+    robot.arm.set_ee_cartesian_trajectory(0, 0, 0.05)
     # move in z plane:
     # ee pos:
     R, ee_pos = ee_pose()
@@ -38,8 +40,10 @@ def grasp_pen():
     del_x = abs(gripper_pos[0] - pen_coord[2])
     alpha = -np.arctan(del_y / del_x)
 
+    # get current joint pos
     joints_pos = robot.arm.get_joint_commands()
     robot.arm.set_joint_positions([alpha, joints_pos[1], joints_pos[2], joints_pos[3]], moving_time=2, accel_time=2)
+    
     # del_x = gripper_pos[0] - pen_coord[0]
     # del_y = gripper_pos[1] - pen_coord[1]    
     # xy_dist = np.linalg.norm(np.power(del_x, 2) + np.power(del_y, 2))
