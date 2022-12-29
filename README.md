@@ -1,5 +1,5 @@
-# arm_control
-The pincher-X 100 robot arm grasp a pen from the user's hand.
+# Who stole my pen?
+The pincher-X 100 robot arm plucks a pen from the user's hand.
 
 ## Demo
 
