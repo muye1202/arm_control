@@ -1,14 +1,16 @@
 from interbotix_xs_modules.xs_robot.arm import InterbotixManipulatorXS
-from interbotix_xs_modules.xs_robot.gripper import InterbotixGripperXS
-import time
 from image_pipeline import get_image, thresholding, centroid,contour, pen_coordinate
 import numpy as np
+import time
 import modern_robotics as mr
 
 # The robot object is what you use to control the robot
 robot = InterbotixManipulatorXS("px100", "arm", "gripper")
 
 def grasp_pen():
+    """
+    Control the pincher-X 100 arm to grasp the pen
+    """
     # get the position of the pen's centroid:
     color_image, depth_image, depth_scale, intrinsic_param = get_image()
     thresholding(color_image)
@@ -26,8 +28,6 @@ def grasp_pen():
     # move in xy plane:
     del_y = base_frame[1]
     del_x = base_frame[0]
-    # del_y = pen_coord[1] - gripper_pos[1]
-    # del_x = abs(gripper_pos[0] - pen_coord[2])
     alpha = np.arctan(del_y / del_x)
 
     # get current joint pos
@@ -52,6 +52,9 @@ def grasp_pen():
 
 
 def ee_pose():
+    """
+    Returns the rotation and translation components in a transformation matrix. 
+    """
     joints = robot.arm.get_joint_commands()
     T = mr.FKinSpace(robot.arm.robot_des.M, robot.arm.robot_des.Slist, joints)
     [R, p] = mr.TransToRp(T)
@@ -63,20 +66,3 @@ if __name__ == "__main__":
     robot.arm.go_to_sleep_pose()
     robot.gripper.release()
     grasp_pen()
-
-
-"""
-mode = 'h'
-# Let the user select the position
-while mode != 'q':
-    mode=input("[h]ome, [s]leep, [q]uit ")
-    if mode == "h":
-        robot.arm.go_to_home_pose()
-    elif mode == "s":
-        robot.arm.go_to_sleep_pose()
-
-print("go to a position: ")
-robot.arm.go_to_sleep_pose()
-time.sleep(3)
-robot.arm.set_joint_positions([0, 0, 0.5, 0], moving_time=2, accel_time=2)
-"""

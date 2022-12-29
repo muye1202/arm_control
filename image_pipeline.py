@@ -1,8 +1,14 @@
+"""
+Image processing unit that outputs the centroid of the pen.
+
+This pipeline first gets image input from Realsense cam,
+applies background removal and noise reduction, extracts
+contour of the pen to grasp, and lastly calculates the
+centroid of the pen.
+"""
 import pyrealsense2 as rs
 import numpy as np
 import cv2
-from collections import OrderedDict
-from matplotlib import pyplot as plt
 
 a = 0
 b = 0
@@ -34,10 +40,6 @@ def get_image():
     # Create a config and configure the pipeline to stream
     #  different resolutions of color and depth streams
     config = rs.config()
-
-    # enable recording and play from file
-    # config.enable_record_to_file("real_sense_recording")
-    # config.enable_device_from_file("real_sense_recording")
 
     # Get device product line for setting a supporting resolution
     pipeline_wrapper = rs.pipeline_wrapper(pipeline)
@@ -101,14 +103,22 @@ def get_image():
 
     # remove noise in image:
     noise_removed = cv2.fastNlMeansDenoisingColored(bg_removed)
-
-    #cv2.imshow('img', color_image)
-    #k = cv2.waitKey(1) & 0xFF
     
     return noise_removed, depth_image, depth_scale, intrinsic_param
 
 def color_calibration(frame):
+    """
+    Allow the user to calibrate the color mask.
+
+    The user can calibrate the color mask so only
+    the desired object will be visible in the image,
+    whose contour can then be extracted.
+
+    Input:
+        frame: Image frame from get_image().
+    """
     cv2.namedWindow('controls')
+
     #create trackbar in 'controls' window with name 'r''
     cv2.createTrackbar('first channel','controls',0,360,change_color_one)
     cv2.createTrackbar('second channel','controls',0,360,change_color_two)
@@ -116,19 +126,25 @@ def color_calibration(frame):
     cv2.createTrackbar('fourth channel','controls',0,360,change_color_four)
 
     while(1):
-
         # Convert BGR to HSV
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         lower = np.array([a-d , b-d , c-d])
         upper = np.array([a+d, b+d, c+d])
+        
         # Threshold the HSV image to get only blue colors
         mask = cv2.inRange(hsv, lower, upper)
         res = cv2.bitwise_and(frame, frame, mask = mask)
 
         cv2.imshow("res", res)
-        k = cv2.waitKey(1) & 0xFF
+        _ = cv2.waitKey(1) & 0xFF
 
 def thresholding(frame):
+    """
+    Make only the pen visible in the image.
+
+    Input:
+        frame: Image frame from get_image().
+    """
     # Convert BGR to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     
@@ -139,6 +155,7 @@ def thresholding(frame):
     d = 48
     lower = np.array([a-d , b-d , c-d])
     upper = np.array([a+d, b+d, c+d])
+    
     # Threshold the HSV image to get only blue colors
     mask = cv2.inRange(hsv, lower, upper)
     res = cv2.bitwise_and(frame, frame, mask = mask)
@@ -154,6 +171,9 @@ def edge_up(x):
     edge_upper = x
 
 def edge_cal():
+    """
+    Extract the edges of the desired object.
+    """
     img = cv2.imread('pen_color_image.png')
     imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -166,20 +186,18 @@ def edge_cal():
         edges = cv2.Canny(imgray, edge_low, edge_upper)
         cv2.imshow('edges', edges)
 
-        k = cv2.waitKey(1) & 0xFF
+        _ = cv2.waitKey(1) & 0xFF
 
 def contour():
-
+    """
+    Extract the contours of the object in an image frame.
+    """
     img = cv2.imread('pen_color_image.png')
     imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # imgray = cv2.GaussianBlur(imgray, (7, 7), cv2.BORDER_DEFAULT)
     edges = cv2.Canny(imgray, 51, 109)
-    ret, im = cv2.threshold(edges, 60, 255, cv2.THRESH_BINARY)
+    _, im = cv2.threshold(edges, 60, 255, cv2.THRESH_BINARY)
 
-    #cv2.imshow('img after threshold', im)
-    #cv2.waitKey(0)
-
-    contours, hierarchy = cv2.findContours(im, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(im, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # concatenate the contours:
     total_cont = contours[0]
     for cnt in contours[1:]:
@@ -187,21 +205,19 @@ def contour():
         
     cv2.drawContours(img, total_cont, -1, (0,255,0), 3)
     cv2.imwrite('contour.png', img)
-    #cv2.imshow('contours', img)
-    #cv2.waitKey(0)
 
     return total_cont, img
 
 def centroid(img, contour):
-    
+    """
+    Calculate the centroid of the contour in image.
+    """
     mmt = cv2.moments(contour)
     cx = int(mmt['m10']/mmt['m00'])
     cy = int(mmt['m01']/mmt['m00'])
 
     cv2.circle(img, (cx, cy), 5, (0,0,255), -1)
     cv2.imwrite('centroid.png', img)
-    #cv2.imshow('centroid', img)
-    #cv2.waitKey(0)
 
     return cx, cy
 
@@ -212,13 +228,4 @@ def pen_coordinate(depth_image, intr, cx, cy):
 if __name__ == "__main__":
     color_image, depth_image, depth_scale, intrinsic_param = get_image()
     color_calibration(color_image)
-    #thresholding(color_image)
-    #edge_cal()
-    #boundary, img = contour()
-    #cx, cy = centroid(img, boundary)
-    #centroid_depth = depth_image[cx, cy] * depth_scale
-    #pen_coord = pen_coordinate(centroid_depth, intrinsic_param, cx, cy)
-    #print(pen_coord)
-    # cv2.imshow('pen', boundary)
 
-    
