@@ -1,6 +1,8 @@
 # Who stole my pen?
 The pincher-X 100 robot arm plucks a pen from the user's hand.
 
+This project contains implementation of a image pipeline that can recognize the pen (or other object) in the range of the camera and outputs the centroid of the object, which is then sent to the robot arm control unit that guides the end-effector to this position and grasps the pen.
+
 ## Demo
 
 
